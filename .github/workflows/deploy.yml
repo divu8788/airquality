@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   deploy:
@@ -28,12 +28,11 @@ jobs:
               git clone https://github.com/${{ github.repository }}.git /home/${{ secrets.VM_USER }}/airquality
 
             cd /home/${{ secrets.VM_USER }}/airquality
-            git pull origin main
+            git fetch origin
+            git reset --hard origin/main
 
-            # Activate virtualenv and install dependencies
             source venv/bin/activate
             pip install -r requirements.txt --quiet
 
-            # Restart the app service
             sudo systemctl restart airquality
             echo "✅ Deployment complete."
