@@ -221,3 +221,4 @@ sudo ufw allow 8080/tcp             # open firewall
 cat /home/azureuser/airquality/.env
 ```
 # trigger deploy
+# test deploy
