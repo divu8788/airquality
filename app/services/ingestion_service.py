@@ -27,25 +27,56 @@ def _log(conn, source, city, status, msg=""):
     cur.execute("INSERT INTO fetch_logs (source,city,status,message) VALUES (%s,%s,%s,%s)", (source,city,status,msg))
     cur.close()
 
+# def fetch_and_store_all():
+#     cities   = current_app.config["MONITORED_CITIES"]
+#     conn     = get_connection()
+#     inserted = 0
+#     for city in cities:
+#         name = city["name"]
+#         for fn, src, args in [
+#             (waqi_service.fetch_city_aqi,        "WAQI",           (current_app.config["WAQI_TOKEN"], name, city.get("waqi_id"))),
+#             (openweather_service.fetch_city_data, "OpenWeatherMap", (current_app.config["OPENWEATHER_KEY"], name, city["lat"], city["lon"])),
+#             (openaq_service.fetch_city_data,      "OpenAQ",         (current_app.config["OPENAQ_KEY"], name, city["lat"], city["lon"])),
+#         ]:
+#             reading = fn(*args)
+#             if reading:
+#                 _insert_reading(conn, reading)
+#                 _log(conn, src, name, "success")
+#                 inserted += 1
+#             else:
+#                 _log(conn, src, name, "error", "No data returned")
+#     conn.close()
+#     logger.info(f"[Ingestion] {inserted} records inserted")
+#     return inserted
+
 def fetch_and_store_all():
     cities   = current_app.config["MONITORED_CITIES"]
     conn     = get_connection()
     inserted = 0
+
     for city in cities:
         name = city["name"]
+
         for fn, src, args in [
-            (waqi_service.fetch_city_aqi,        "WAQI",           (current_app.config["WAQI_TOKEN"], name, city.get("waqi_id"))),
+            (waqi_service.fetch_city_aqi, "WAQI", (current_app.config["WAQI_TOKEN"], name, city.get("waqi_id"))),
             (openweather_service.fetch_city_data, "OpenWeatherMap", (current_app.config["OPENWEATHER_KEY"], name, city["lat"], city["lon"])),
-            (openaq_service.fetch_city_data,      "OpenAQ",         (current_app.config["OPENAQ_KEY"], name, city["lat"], city["lon"])),
+            (openaq_service.fetch_city_data, "OpenAQ", (current_app.config["OPENAQ_KEY"], name, city["lat"], city["lon"])),
         ]:
-            reading = fn(*args)
-            if reading:
-                _insert_reading(conn, reading)
-                _log(conn, src, name, "success")
-                inserted += 1
-            else:
-                _log(conn, src, name, "error", "No data returned")
+            try:
+                reading = fn(*args)
+
+                if reading:
+                    _insert_reading(conn, reading)
+                    _log(conn, src, name, "success")
+                    inserted += 1
+                else:
+                    _log(conn, src, name, "error", "No data returned")
+
+            except Exception as e:
+                print(f"[ERROR] {src} - {name}: {e}")
+                _log(conn, src, name, "error", str(e))
+
     conn.close()
-    logger.info(f"[Ingestion] {inserted} records inserted")
+    print(f"[Ingestion] {inserted} records inserted")
     return inserted
 PYEOF

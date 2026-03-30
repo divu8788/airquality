@@ -1,7 +1,7 @@
 """
 REST API Routes
 """
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, traceback
 from app.models.database import get_connection
 from app.services.ingestion_service import fetch_and_store_all
 from app.services.training_service import retrain_models
@@ -60,11 +60,25 @@ def get_latest():
     return jsonify(rows)
 
 
+# @api_bp.route("/fetch", methods=["POST"])
+# def trigger_fetch():
+#     """Manually trigger data fetch from all APIs."""
+#     n = fetch_and_store_all()
+#     return jsonify({"inserted": n, "status": "ok"})
+
+
 @api_bp.route("/fetch", methods=["POST"])
 def trigger_fetch():
-    """Manually trigger data fetch from all APIs."""
-    n = fetch_and_store_all()
-    return jsonify({"inserted": n, "status": "ok"})
+    try:
+        n = fetch_and_store_all()
+        return jsonify({"inserted": n, "status": "ok"}), 200
+
+    except Exception as e:
+        traceback.print_exc()  # prints full error in terminal
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
 
 @api_bp.route("/train", methods=["POST"])
