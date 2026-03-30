@@ -222,3 +222,4 @@ cat /home/azureuser/airquality/.env
 ```
 # trigger deploy
 # test deploy
+fix ssh
