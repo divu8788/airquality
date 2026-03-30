@@ -225,3 +225,5 @@ cat /home/azureuser/airquality/.env
 fix ssh
 fix ssh
 fix ssh failure
+fix ssh fix git add .
+fix ssh fix git add .
