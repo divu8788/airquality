@@ -224,3 +224,4 @@ cat /home/azureuser/airquality/.env
 # test deploy
 fix ssh
 fix ssh
+fix ssh failure
