@@ -1,0 +1,20 @@
+[Unit]
+Description=Air Quality Health Risk Prediction - Flask App
+After=network.target mysql.service
+
+[Service]
+User=azureuser
+WorkingDirectory=/home/azureuser/airquality
+EnvironmentFile=/home/azureuser/airquality/.env
+ExecStart=/home/azureuser/airquality/venv/bin/gunicorn \
+    --workers 3 \
+    --bind 0.0.0.0:8080 \
+    --timeout 120 \
+    --access-logfile /var/log/airquality/access.log \
+    --error-logfile /var/log/airquality/error.log \
+    run:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
