@@ -220,3 +220,4 @@ sudo ufw allow 8080/tcp             # open firewall
 # Check .env file exists on VM and has correct values
 cat /home/azureuser/airquality/.env
 ```
+# trigger deploy
