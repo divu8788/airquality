@@ -1,4 +1,3 @@
-cat > ~/airquality/.github/workflows/deploy.yml << 'EOF'
 name: Deploy to Azure VM
 
 on:
@@ -25,5 +24,4 @@ jobs:
             source venv/bin/activate
             pip install -r requirements.txt --quiet
             sudo systemctl restart airquality
-            echo "Deploy complete"
-EOF
+            echo "✅ Deploy complete"
