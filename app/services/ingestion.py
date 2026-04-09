@@ -1,7 +1,7 @@
 import logging
 from flask import current_app
 from app.models.database import get_db
-from app.services import waqi, openweather, openaq
+from app.services import waqi, openweather
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ def run():
         sources = [
             ("WAQI",           waqi.fetch,        (cfg["WAQI_TOKEN"],      name, city.get("waqi"))),
             ("OpenWeatherMap", openweather.fetch,  (cfg["OPENWEATHER_KEY"], name, lat, lon)),
-            ("OpenAQ",         openaq.fetch,       (cfg["OPENAQ_KEY"],      name, lat, lon)),
+            # ("OpenAQ",         openaq.fetch,       (cfg["OPENAQ_KEY"],      name, lat, lon)),
         ]
 
         for src_name, fn, args in sources:
