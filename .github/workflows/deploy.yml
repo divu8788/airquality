@@ -1,28 +1,29 @@
-name: Deploy to VM
+cat > ~/airquality/.github/workflows/deploy.yml << 'EOF'
+name: Deploy to Azure VM
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   # ✅ ADD THIS
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: SSH Deploy
-      uses: appleboy/ssh-action@v1.0.3   # ✅ upgrade version
-      with:
-        host: 4.235.112.189
-        username: azureuser
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        script: |
-          cd air-quality-ml
-          git pull
-          pkill gunicorn || true
-          nohup gunicorn -w 4 -b 0.0.0.0:8080 run:app &
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:     ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key:      ${{ secrets.VM_SSH_KEY }}
+          port:     22
+          script: |
+            cd /home/gipra/airquality
+            git pull https://divu8788:${{ secrets.GH_TOKEN }}@github.com/divu8788/airquality.git main
+            source venv/bin/activate
+            pip install -r requirements.txt --quiet
+            sudo systemctl restart airquality
+            echo "Deploy complete"
+EOF
