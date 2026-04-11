@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true    # ← ADD THIS BLOCK
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   deploy:
@@ -24,18 +24,24 @@ jobs:
           script: |
             set -e
             cd /home/gipra/airquality
+
             echo "📥 Pulling latest code..."
             git fetch origin main
             git reset --hard origin/main
+
             echo "📦 Installing dependencies..."
             source venv/bin/activate
             pip install -r requirements.txt --quiet
             pip install pytest pytest-flask --quiet
+
             echo "🧪 Running tests..."
             pytest tests/ -v --tb=short
             echo "✅ All tests passed!"
+
             echo "🚀 Restarting service..."
-            sudo systemctl restart airquality
+            pkill -f "python run.py" || true
+            sleep 2
+            nohup python run.py > /tmp/airquality.log 2>&1 &
             sleep 3
-            sudo systemctl status airquality --no-pager
+            curl -s http://localhost:8080/api/health
             echo "✅ Deploy complete - $(git log --oneline -1)"
