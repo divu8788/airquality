@@ -19,9 +19,25 @@ jobs:
           key:      ${{ secrets.VM_SSH_KEY }}
           port:     22
           script: |
+            set -e
             cd /home/gipra/airquality
-            git pull https://divu8788:${{ secrets.GH_TOKEN }}@github.com/divu8788/airquality.git main
+
+            echo "📥 Pulling latest code..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "📦 Installing dependencies..."
             source venv/bin/activate
             pip install -r requirements.txt --quiet
+            pip install pytest pytest-flask --quiet
+
+            echo "🧪 Running tests..."
+            pytest tests/ -v --tb=short
+            echo "✅ All tests passed!"
+
+            echo "🚀 Restarting service..."
             sudo systemctl restart airquality
-            echo "✅ Deploy complete"
+            sleep 3
+            sudo systemctl status airquality --no-pager
+
+            echo "✅ Deploy complete - $(git log --oneline -1)"
