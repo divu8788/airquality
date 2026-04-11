@@ -8,6 +8,7 @@ api_bp = Blueprint("api", __name__)
 
 
 def _serial(rows):
+    """Convert datetime objects to ISO strings for JSON serialisation."""
     for r in rows:
         for k, v in r.items():
             if isinstance(v, datetime):
@@ -29,11 +30,18 @@ def readings():
     conn  = get_db()
     cur   = conn.cursor(dictionary=True)
     if city:
-        cur.execute("SELECT * FROM readings WHERE city=%s ORDER BY fetched_at DESC LIMIT %s", (city, limit))
+        cur.execute(
+            "SELECT * FROM readings WHERE city=%s ORDER BY fetched_at DESC LIMIT %s",
+            (city, limit)
+        )
     else:
-        cur.execute("SELECT * FROM readings ORDER BY fetched_at DESC LIMIT %s", (limit,))
+        cur.execute(
+            "SELECT * FROM readings ORDER BY fetched_at DESC LIMIT %s",
+            (limit,)
+        )
     rows = cur.fetchall()
-    cur.close(); conn.close()
+    cur.close()
+    conn.close()
     return jsonify(_serial(rows))
 
 
@@ -44,11 +52,14 @@ def readings_latest():
     cur.execute("""
         SELECT r.* FROM readings r
         INNER JOIN (
-            SELECT city, MAX(fetched_at) mt FROM readings GROUP BY city
+            SELECT city, MAX(fetched_at) mt
+            FROM readings
+            GROUP BY city
         ) m ON r.city = m.city AND r.fetched_at = m.mt
     """)
     rows = cur.fetchall()
-    cur.close(); conn.close()
+    cur.close()
+    conn.close()
     return jsonify(_serial(rows))
 
 
@@ -71,11 +82,14 @@ def train_models():
         cur  = conn.cursor(dictionary=True)
         cur.execute("SELECT * FROM readings ORDER BY fetched_at DESC LIMIT 10000")
         rows = cur.fetchall()
-        cur.close(); conn.close()
+        cur.close()
+        conn.close()
 
         if len(rows) < 30:
-            return jsonify({"status": "error",
-                            "message": "Need at least 30 rows. Have: " + str(len(rows))}), 400
+            return jsonify({
+                "status":  "error",
+                "message": "Need at least 30 rows. Have: " + str(len(rows))
+            }), 400
 
         df      = pd.DataFrame(rows)
         metrics = train(df)
@@ -83,14 +97,17 @@ def train_models():
         conn = get_db()
         cur  = conn.cursor()
         for mname, m in metrics.items():
-            cur.execute("""
-                INSERT INTO model_metrics
-                    (model, accuracy, f1, precision_, recall, mae, rmse, rows_used)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-            """, (mname, m["accuracy"], m["f1"], m["precision_"],
-                  m["recall"], m["mae"], m["rmse"], m["rows_used"]))
-        cur.close(); conn.close()
+            cur.execute(
+                "INSERT INTO model_metrics "
+                "(model, accuracy, f1, precision_, recall, mae, rmse, rows_used) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                (mname, m["accuracy"], m["f1"], m["precision_"],
+                 m["recall"], m["mae"], m["rmse"], m["rows_used"])
+            )
+        cur.close()
+        conn.close()
         return jsonify({"status": "ok", "metrics": metrics})
+
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -114,21 +131,24 @@ def predict():
             row = cur.fetchone()
             if not row:
                 continue
+
             preds = predict_city(name, row)
             ins   = conn.cursor()
             for p in preds:
-                ins.execute("""
-                    INSERT INTO predictions
-                        (city, model, risk_level, risk_score, confidence, predicted_at)
-                    VALUES
-                        (%(city)s, %(model)s, %(risk_level)s,
-                         %(risk_score)s, %(confidence)s, %(predicted_at)s)
-                """, p)
+                ins.execute(
+                    "INSERT INTO predictions "
+                    "(city, model, risk_level, risk_score, confidence, predicted_at) "
+                    "VALUES (%s, %s, %s, %s, %s, %s)",
+                    (p["city"], p["model"], p["risk_level"],
+                     p["risk_score"], p["confidence"], p["predicted_at"])
+                )
                 total += 1
             ins.close()
 
-        cur.close(); conn.close()
+        cur.close()
+        conn.close()
         return jsonify({"status": "ok", "predictions_stored": total})
+
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -141,11 +161,18 @@ def predictions():
     conn  = get_db()
     cur   = conn.cursor(dictionary=True)
     if city:
-        cur.execute("SELECT * FROM predictions WHERE city=%s ORDER BY predicted_at DESC LIMIT %s", (city, limit))
+        cur.execute(
+            "SELECT * FROM predictions WHERE city=%s ORDER BY predicted_at DESC LIMIT %s",
+            (city, limit)
+        )
     else:
-        cur.execute("SELECT * FROM predictions ORDER BY predicted_at DESC LIMIT %s", (limit,))
+        cur.execute(
+            "SELECT * FROM predictions ORDER BY predicted_at DESC LIMIT %s",
+            (limit,)
+        )
     rows = cur.fetchall()
-    cur.close(); conn.close()
+    cur.close()
+    conn.close()
     return jsonify(_serial(rows))
 
 
@@ -156,7 +183,8 @@ def metrics():
     cur  = conn.cursor(dictionary=True)
     cur.execute("SELECT * FROM model_metrics ORDER BY trained_at DESC LIMIT 30")
     rows = cur.fetchall()
-    cur.close(); conn.close()
+    cur.close()
+    conn.close()
     return jsonify(_serial(rows))
 
 
@@ -166,7 +194,11 @@ def logs():
     limit = int(request.args.get("limit", 50))
     conn  = get_db()
     cur   = conn.cursor(dictionary=True)
-    cur.execute("SELECT * FROM fetch_logs ORDER BY logged_at DESC LIMIT %s", (limit,))
+    cur.execute(
+        "SELECT * FROM fetch_logs ORDER BY logged_at DESC LIMIT %s",
+        (limit,)
+    )
     rows = cur.fetchall()
-    cur.close(); conn.close()
+    cur.close()
+    conn.close()
     return jsonify(_serial(rows))
