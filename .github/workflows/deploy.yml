@@ -4,10 +4,12 @@ on:
   push:
     branches: [main]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -19,18 +21,31 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key:      ${{ secrets.VM_SSH_KEY }}
           port:     22
+          request_pty: true
           script: |
             set -e
-            cd /home/${{ secrets.VM_USER }}/airquality || \
-              git clone https://github.com/${{ github.repository }}.git /home/${{ secrets.VM_USER }}/airquality
+            cd /home/gipra/airquality
 
-            cd /home/${{ secrets.VM_USER }}/airquality
-            git pull origin main
+            echo "📥 Pulling latest code..."
+            git fetch origin main
+            git reset --hard origin/main
 
-            # Activate virtualenv and install dependencies
+            echo "📦 Installing dependencies..."
             source venv/bin/activate
             pip install -r requirements.txt --quiet
+            pip install pytest pytest-flask --quiet
 
-            # Restart the app service
-            sudo systemctl restart airquality
-            echo "✅ Deployment complete."
+            echo "🧪 Running tests..."
+            pytest tests/ -v --tb=short
+            echo "✅ All tests passed!"
+
+            echo "🚀 Restarting service..."
+            fuser -k 8080/tcp || true
+            sleep 2
+            cd /home/gipra/airquality
+            source venv/bin/activate
+            nohup python run.py >> /tmp/airquality.log 2>&1 &
+            disown
+            sleep 4
+            curl -s http://localhost:8080/api/health && echo ""
+            echo "✅ Deploy complete - $(git log --oneline -1)"

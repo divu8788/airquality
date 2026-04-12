@@ -2,574 +2,262 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Air Quality Health Risk Prediction</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Air Quality — Health Risk Prediction</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600;700&display=swap');
-
-  :root {
-    --bg: #0a0e1a;
-    --surface: #111827;
-    --border: #1e293b;
-    --accent: #00d4ff;
-    --accent2: #7c3aed;
-    --good: #22c55e;
-    --moderate: #eab308;
-    --unhealthy: #f97316;
-    --hazardous: #ef4444;
-    --text: #e2e8f0;
-    --muted: #64748b;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Inter', sans-serif;
-    min-height: 100vh;
-  }
-
-  /* TOP NAV */
-  nav {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 16px 32px;
-    border-bottom: 1px solid var(--border);
-    background: rgba(10,14,26,0.95);
-    position: sticky; top: 0; z-index: 100;
-    backdrop-filter: blur(8px);
-  }
-  .nav-logo {
-    font-family: 'Space Mono', monospace;
-    font-size: 15px; font-weight: 700;
-    color: var(--accent); letter-spacing: 1px;
-  }
-  .nav-logo span { color: var(--text); }
-  .nav-status { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
-  .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--good); animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-
-  /* LAYOUT */
-  main { max-width: 1400px; margin: 0 auto; padding: 32px 24px; }
-
-  /* HEADER */
-  .header { margin-bottom: 32px; }
-  .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 6px; }
-  .header h1 span { color: var(--accent); }
-  .header p { color: var(--muted); font-size: 14px; }
-
-  /* STATS ROW */
-  .stats-row {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px; margin-bottom: 32px;
-  }
-  .stat-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 20px;
-    position: relative; overflow: hidden;
-  }
-  .stat-card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-  }
-  .stat-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
-  .stat-value { font-size: 32px; font-weight: 700; font-family: 'Space Mono', monospace; margin: 8px 0 4px; }
-  .stat-sub { font-size: 12px; color: var(--muted); }
-
-  /* GRID */
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
-  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; margin-bottom: 24px; }
-  @media(max-width:900px){ .grid-2,.grid-3{ grid-template-columns:1fr; } }
-
-  /* CARD */
-  .card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 24px;
-  }
-  .card-title {
-    font-size: 13px; font-weight: 600; text-transform: uppercase;
-    letter-spacing: .8px; color: var(--muted); margin-bottom: 20px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .card-title::before { content:''; width:3px; height:14px; background:var(--accent); border-radius:2px; }
-
-  /* CITY GRID */
-  .city-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 16px; margin-bottom: 24px;
-  }
-  .city-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 20px; cursor: pointer;
-    transition: border-color .2s, transform .2s;
-  }
-  .city-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-  .city-card.active { border-color: var(--accent); background: rgba(0,212,255,.05); }
-  .city-name { font-weight: 700; font-size: 16px; margin-bottom: 12px; }
-  .city-aqi { font-size: 40px; font-weight: 700; font-family: 'Space Mono', monospace; }
-  .city-risk { font-size: 12px; font-weight: 600; margin-top: 4px; border-radius: 20px; padding: 2px 10px; display: inline-block; }
-  .city-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
-  .metric { background: rgba(255,255,255,.03); border-radius: 6px; padding: 8px; }
-  .metric-label { font-size: 10px; color: var(--muted); }
-  .metric-value { font-size: 14px; font-weight: 600; font-family: 'Space Mono', monospace; }
-  .city-source { font-size: 10px; color: var(--muted); margin-top: 10px; }
-
-  /* RISK COLORS */
-  .risk-good    { color: var(--good);     background: rgba(34,197,94,.15); }
-  .risk-moderate{ color: var(--moderate); background: rgba(234,179,8,.15); }
-  .risk-unhealthy{color: var(--unhealthy);background: rgba(249,115,22,.15);}
-  .risk-hazardous{color: var(--hazardous);background: rgba(239,68,68,.15); }
-
-  /* ML COMPARISON TABLE */
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { text-align: left; padding: 10px 12px; color: var(--muted); font-weight: 600;
-       border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; }
-  td { padding: 10px 12px; border-bottom: 1px solid rgba(30,41,59,.5); }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: rgba(255,255,255,.02); }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
-  .badge-best { background: rgba(34,197,94,.2); color: var(--good); }
-
-  /* CHART CONTAINER */
-  .chart-wrap { position: relative; height: 240px; }
-
-  /* LOGS */
-  .log-list { max-height: 220px; overflow-y: auto; }
-  .log-item { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(30,41,59,.4); font-size: 12px; }
-  .log-item:last-child { border-bottom: none; }
-  .log-ok   { color: var(--good); }
-  .log-err  { color: var(--hazardous); }
-  .log-city { color: var(--text); min-width: 80px; }
-  .log-src  { color: var(--accent); min-width: 120px; }
-  .log-time { color: var(--muted); margin-left: auto; white-space: nowrap; }
-
-  /* ACTIONS */
-  .actions { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
-  .btn {
-    padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600;
-    cursor: pointer; border: none; transition: opacity .2s, transform .1s;
-    display: flex; align-items: center; gap: 6px;
-  }
-  .btn:hover { opacity: .85; }
-  .btn:active { transform: scale(.97); }
-  .btn-primary { background: var(--accent); color: #000; }
-  .btn-secondary { background: var(--accent2); color: #fff; }
-  .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
-  .btn:disabled { opacity: .4; cursor: not-allowed; }
-
-  /* SPINNER */
-  .spinner { width: 14px; height: 14px; border: 2px solid rgba(0,0,0,.3); border-top-color: #000; border-radius: 50%; animation: spin .6s linear infinite; display: none; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* TOAST */
-  #toast {
-    position: fixed; bottom: 24px; right: 24px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; padding: 14px 18px; font-size: 13px;
-    transform: translateY(80px); opacity: 0;
-    transition: transform .3s, opacity .3s; z-index: 999;
-    max-width: 320px;
-  }
-  #toast.show { transform: translateY(0); opacity: 1; }
-
-  .last-updated { font-size: 11px; color: var(--muted); margin-top: 8px; }
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600;700&display=swap');
+:root{--bg:#0b0f1a;--surface:#131929;--border:#1e2d45;--accent:#00d4ff;--accent2:#7c3aed;--good:#22c55e;--mod:#eab308;--bad:#f97316;--haz:#ef4444;--text:#e2e8f0;--muted:#64748b}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh}
+nav{display:flex;align-items:center;justify-content:space-between;padding:16px 28px;border-bottom:1px solid var(--border);background:rgba(11,15,26,.95);position:sticky;top:0;z-index:100;backdrop-filter:blur(8px)}
+.logo{font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--accent);letter-spacing:1px}.logo span{color:var(--text)}
+.live{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--good);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+main{max-width:1360px;margin:0 auto;padding:28px 20px}
+h1{font-size:26px;font-weight:700;margin-bottom:6px}h1 span{color:var(--accent)}
+.sub{color:var(--muted);font-size:13px;margin-bottom:24px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px}
+.btn{padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;display:flex;align-items:center;gap:6px;transition:opacity .2s}
+.btn:hover{opacity:.8}.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-p{background:var(--accent);color:#000}.btn-s{background:var(--accent2);color:#fff}
+.btn-o{background:transparent;color:var(--text);border:1px solid var(--border)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;position:relative;overflow:hidden}
+.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.stat-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px}
+.stat-v{font-size:30px;font-weight:700;font-family:'Space Mono',monospace;margin:6px 0 2px}
+.stat-s{font-size:11px;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:20px}
+@media(max-width:800px){.grid2{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px}
+.card-t{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-t::before{content:'';width:3px;height:12px;background:var(--accent);border-radius:2px;flex-shrink:0}
+.city-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;cursor:pointer;transition:border-color .2s,transform .2s}
+.city-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.city-name{font-weight:700;font-size:15px;margin-bottom:10px}
+.city-aqi{font-size:36px;font-weight:700;font-family:'Space Mono',monospace}
+.risk-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;display:inline-block;margin-top:4px}
+.rg{color:var(--good);background:rgba(34,197,94,.12)}
+.rm{color:var(--mod);background:rgba(234,179,8,.12)}
+.rb{color:var(--bad);background:rgba(249,115,22,.12)}
+.rh{color:var(--haz);background:rgba(239,68,68,.12)}
+.city-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.cm{background:rgba(255,255,255,.03);border-radius:5px;padding:7px}
+.cm-l{font-size:10px;color:var(--muted)}.cm-v{font-size:13px;font-weight:600;font-family:'Space Mono',monospace}
+.csrc{font-size:10px;color:var(--muted);margin-top:8px}
+.chart-wrap{height:220px;position:relative}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 10px;color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+td{padding:8px 10px;border-bottom:1px solid rgba(30,41,59,.4)}
+tr:last-child td{border-bottom:none}tr:hover td{background:rgba(255,255,255,.02)}
+.badge{padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600}
+.badge-best{background:rgba(34,197,94,.15);color:var(--good)}
+.log-row{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid rgba(30,41,59,.35);font-size:12px}
+.log-row:last-child{border-bottom:none}
+.ok{color:var(--good)}.err{color:var(--haz)}.nd{color:var(--mod)}
+.spin{width:12px;height:12px;border:2px solid rgba(0,0,0,.2);border-top-color:#000;border-radius:50%;animation:spin .6s linear infinite;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+#toast{position:fixed;bottom:20px;right:20px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:13px;transform:translateY(60px);opacity:0;transition:all .3s;z-index:999;max-width:300px}
+#toast.show{transform:translateY(0);opacity:1}
 </style>
 </head>
 <body>
-
 <nav>
-  <div class="nav-logo">AQ<span>·</span>PREDICT</div>
-  <div class="nav-status">
-    <div class="pulse"></div>
-    <span id="nav-time">Loading…</span>
-  </div>
+  <div class="logo">AQ<span>·</span>PREDICT</div>
+  <div class="live"><div class="dot"></div><span id="clock">–</span></div>
 </nav>
-
 <main>
-  <div class="header">
-    <h1>Air Quality <span>Health Risk</span> Prediction</h1>
-    <p>Real-time monitoring via WAQI · OpenWeatherMap · OpenAQ &nbsp;|&nbsp; ML-powered risk classification</p>
-  </div>
+  <h1>Air Quality <span>Health Risk</span> Prediction</h1>
+  <p class="sub">Real-time data from WAQI · OpenWeatherMap · OpenAQ &nbsp;|&nbsp; ML Risk Classification</p>
 
-  <!-- ACTIONS -->
   <div class="actions">
-    <button class="btn btn-primary" id="btn-fetch">
-      <span class="spinner" id="sp-fetch"></span>⬇ Fetch Now
-    </button>
-    <button class="btn btn-secondary" id="btn-train">
-      <span class="spinner" id="sp-train"></span>🧠 Retrain Models
-    </button>
-    <button class="btn btn-outline" id="btn-predict">
-      <span class="spinner" id="sp-predict"></span>⚡ Run Predictions
-    </button>
-    <button class="btn btn-outline" id="btn-refresh">🔄 Refresh Data</button>
+    <button class="btn btn-p" id="btn-fetch"><span class="spin" id="sp-fetch"></span>⬇ Fetch Now</button>
+    <button class="btn btn-s" id="btn-train"><span class="spin" id="sp-train"></span>🧠 Train Models</button>
+    <button class="btn btn-o" id="btn-predict"><span class="spin" id="sp-predict"></span>⚡ Run Predictions</button>
+    <button class="btn btn-o" id="btn-refresh">🔄 Refresh</button>
   </div>
 
-  <!-- STATS ROW -->
-  <div class="stats-row">
-    <div class="stat-card">
-      <div class="stat-label">Cities Monitored</div>
-      <div class="stat-value" id="st-cities">—</div>
-      <div class="stat-sub">Active stations</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Total Readings</div>
-      <div class="stat-value" id="st-readings">—</div>
-      <div class="stat-sub">All sources combined</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Avg Global AQI</div>
-      <div class="stat-value" id="st-aqi">—</div>
-      <div class="stat-sub">Latest readings</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">ML Models Active</div>
-      <div class="stat-value" id="st-models">—</div>
-      <div class="stat-sub">Trained classifiers</div>
-    </div>
+  <div class="stats">
+    <div class="stat"><div class="stat-l">Cities</div><div class="stat-v" id="s-cities">–</div><div class="stat-s">monitored</div></div>
+    <div class="stat"><div class="stat-l">Total Readings</div><div class="stat-v" id="s-readings">–</div><div class="stat-s">in database</div></div>
+    <div class="stat"><div class="stat-l">Avg AQI</div><div class="stat-v" id="s-aqi">–</div><div class="stat-s">latest readings</div></div>
+    <div class="stat"><div class="stat-l">ML Models</div><div class="stat-v" id="s-models">–</div><div class="stat-s">trained</div></div>
   </div>
 
-  <!-- CITY CARDS -->
-  <div class="card-title" style="margin-bottom:16px">
-    <div style="width:3px;height:14px;background:var(--accent);border-radius:2px"></div>
-    &nbsp;Live City Readings
-  </div>
-  <div class="city-grid" id="city-grid">
-    <div style="color:var(--muted);font-size:13px">Loading city data…</div>
+  <div class="card-t" style="margin-bottom:12px"><div style="width:3px;height:12px;background:var(--accent);border-radius:2px"></div>&nbsp;Live City Readings</div>
+  <div class="grid3" id="city-grid"><div style="color:var(--muted);font-size:13px">Loading…</div></div>
+
+  <div class="grid2">
+    <div class="card"><div class="card-t">AQI Trend</div><div class="chart-wrap"><canvas id="trend-chart"></canvas></div></div>
+    <div class="card"><div class="card-t">Risk Distribution</div><div class="chart-wrap"><canvas id="risk-chart"></canvas></div></div>
   </div>
 
-  <!-- AQI CHART + RISK PIE -->
-  <div class="grid-2">
+  <div class="grid2">
     <div class="card">
-      <div class="card-title">AQI Trend — Last 20 Readings</div>
-      <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
-      <div class="last-updated" id="trend-updated"></div>
+      <div class="card-t">ML Model Comparison</div>
+      <table><thead><tr><th>Model</th><th>Accuracy</th><th>F1</th><th>Precision</th><th>Recall</th></tr></thead>
+      <tbody id="model-tbody"><tr><td colspan="5" style="color:var(--muted)">No models trained yet.</td></tr></tbody></table>
     </div>
     <div class="card">
-      <div class="card-title">Risk Level Distribution</div>
-      <div class="chart-wrap"><canvas id="risk-chart"></canvas></div>
+      <div class="card-t">Latest Predictions</div>
+      <table><thead><tr><th>City</th><th>Model</th><th>Risk</th><th>Score</th><th>Conf</th></tr></thead>
+      <tbody id="pred-tbody"><tr><td colspan="5" style="color:var(--muted)">No predictions yet.</td></tr></tbody></table>
     </div>
   </div>
 
-  <!-- ML MODEL COMPARISON + PREDICTIONS -->
-  <div class="grid-2">
-    <div class="card">
-      <div class="card-title">ML Model Comparison</div>
-      <table id="model-table">
-        <thead>
-          <tr>
-            <th>Model</th><th>Accuracy</th><th>F1</th><th>Precision</th><th>Recall</th>
-          </tr>
-        </thead>
-        <tbody id="model-tbody">
-          <tr><td colspan="5" style="color:var(--muted)">No models trained yet. Click "Retrain Models".</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="card">
-      <div class="card-title">Latest Predictions</div>
-      <table>
-        <thead>
-          <tr><th>City</th><th>Model</th><th>Risk</th><th>Score</th><th>Conf.</th></tr>
-        </thead>
-        <tbody id="pred-tbody">
-          <tr><td colspan="5" style="color:var(--muted)">No predictions yet.</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- FETCH LOGS -->
   <div class="card">
-    <div class="card-title">Fetch Logs</div>
-    <div class="log-list" id="log-list">
-      <div style="color:var(--muted);font-size:13px">No logs yet.</div>
-    </div>
+    <div class="card-t">Fetch Logs</div>
+    <div id="log-list" style="max-height:200px;overflow-y:auto"><div style="color:var(--muted);font-size:13px">No logs.</div></div>
   </div>
 </main>
-
 <div id="toast"></div>
-
 <script>
-const BASE = '';
+function toast(msg,ok=true){const e=document.getElementById('toast');e.textContent=msg;e.style.borderColor=ok?'var(--good)':'var(--haz)';e.classList.add('show');setTimeout(()=>e.classList.remove('show'),3500)}
+function riskClass(l=''){const r=l.toLowerCase();if(r.includes('good'))return'rg';if(r.includes('moderate'))return'rm';if(r.includes('unhealthy')||r.includes('poor'))return'rb';return'rh'}
+function aqiColor(a){if(!a)return'var(--muted)';if(a<=50)return'var(--good)';if(a<=100)return'var(--mod)';if(a<=200)return'var(--bad)';return'var(--haz)'}
+function v(x,u=''){return x!=null?Number(x).toFixed(1)+u:'–'}
+function sp(id,on){document.getElementById('sp-'+id).style.display=on?'inline-block':'none'}
+async function get(p){const r=await fetch(p);return r.json()}
+async function post(p){const r=await fetch(p,{method:'POST'});return r.json()}
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-function toast(msg, ok=true) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.style.borderColor = ok ? 'var(--good)' : 'var(--hazardous)';
-  el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 3500);
+setInterval(()=>document.getElementById('clock').textContent='Live · '+new Date().toUTCString().slice(17,25)+' UTC',1000);
+
+let tChart,rChart;
+function initCharts(){
+  tChart=new Chart(document.getElementById('trend-chart').getContext('2d'),{type:'line',data:{labels:[],datasets:[]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#64748b',font:{size:11}}}},scales:{x:{ticks:{color:'#64748b'},grid:{color:'rgba(30,41,59,.5)'}},y:{ticks:{color:'#64748b'},grid:{color:'rgba(30,41,59,.5)'}}}}});
+  rChart=new Chart(document.getElementById('risk-chart').getContext('2d'),{type:'doughnut',data:{labels:[],datasets:[{data:[],backgroundColor:['#22c55e','#eab308','#f97316','#ef4444','#7c3aed']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#94a3b8',font:{size:11}}}}}});
 }
 
-function riskClass(level='') {
-  const l = level.toLowerCase();
-  if (l.includes('good'))     return 'risk-good';
-  if (l.includes('moderate')) return 'risk-moderate';
-  if (l.includes('unhealthy')||l.includes('poor')) return 'risk-unhealthy';
-  return 'risk-hazardous';
-}
-
-function aqiColor(aqi) {
-  if (!aqi) return 'var(--muted)';
-  if (aqi <= 50)  return 'var(--good)';
-  if (aqi <= 100) return 'var(--moderate)';
-  if (aqi <= 200) return 'var(--unhealthy)';
-  return 'var(--hazardous)';
-}
-
-function val(v, unit='') { return v != null ? (+v).toFixed(1)+unit : '—'; }
-
-function spinner(id, on) {
-  document.getElementById('sp-'+id).style.display = on ? 'inline-block' : 'none';
-}
-
-async function apiGet(path) {
-  const r = await fetch(BASE+path);
-  return r.json();
-}
-
-async function apiPost(path) {
-  const r = await fetch(BASE+path, {method:'POST'});
-  return r.json();
-}
-
-// ─── Clock ───────────────────────────────────────────────────────────────────
-function updateClock() {
-  document.getElementById('nav-time').textContent =
-    'Live · ' + new Date().toUTCString().slice(17,25) + ' UTC';
-}
-setInterval(updateClock, 1000); updateClock();
-
-// ─── Charts ──────────────────────────────────────────────────────────────────
-let trendChart, riskChart;
-const chartDefaults = {
-  color: '#e2e8f0',
-  plugins: { legend: { labels: { color:'#64748b', font:{size:11} } } },
-  scales: {
-    x: { ticks:{color:'#64748b'}, grid:{color:'rgba(30,41,59,.6)'} },
-    y: { ticks:{color:'#64748b'}, grid:{color:'rgba(30,41,59,.6)'} }
-  }
-};
-
-function initTrendChart() {
-  const ctx = document.getElementById('trend-chart').getContext('2d');
-  trendChart = new Chart(ctx, {
-    type: 'line',
-    data: { labels:[], datasets:[] },
-    options: { ...chartDefaults, responsive:true, maintainAspectRatio:false,
-      plugins:{...chartDefaults.plugins,
-        tooltip:{mode:'index',intersect:false}
-      }
-    }
-  });
-}
-
-function initRiskChart() {
-  const ctx = document.getElementById('risk-chart').getContext('2d');
-  riskChart = new Chart(ctx, {
-    type: 'doughnut',
-    data: { labels:[], datasets:[{data:[], backgroundColor:
-      ['#22c55e','#eab308','#f97316','#ef4444','#7c3aed']}] },
-    options: { responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ position:'right', labels:{color:'#94a3b8',font:{size:11}} } }
-    }
-  });
-}
-
-// ─── Load latest readings ─────────────────────────────────────────────────────
-async function loadLatest() {
-  try {
-    const data = await apiGet('/api/readings/latest');
-    const grid = document.getElementById('city-grid');
-    if (!data.length) { grid.innerHTML = '<div style="color:var(--muted)">No data yet — click Fetch Now.</div>'; return; }
-
-    // Stats
-    const cities = [...new Set(data.map(r=>r.city))];
-    document.getElementById('st-cities').textContent = cities.length;
-    const aqis = data.map(r=>r.aqi).filter(Boolean);
-    document.getElementById('st-aqi').textContent = aqis.length ? Math.round(aqis.reduce((a,b)=>a+b,0)/aqis.length) : '—';
+async function loadAll(){
+  try{
+    const latest=await get('/api/readings/latest');
+    const all=await get('/api/readings?limit=200');
+    const cities=[...new Set(latest.map(r=>r.city))];
+    document.getElementById('s-cities').textContent=cities.length;
+    const aqis=latest.map(r=>r.aqi).filter(Boolean);
+    document.getElementById('s-aqi').textContent=aqis.length?Math.round(aqis.reduce((a,b)=>a+b)/aqis.length):'–';
+    document.getElementById('s-readings').textContent=all.length+(all.length>=200?'+':'');
 
     // City cards
-    grid.innerHTML = '';
-    cities.forEach(city => {
-      const rows = data.filter(r=>r.city===city);
-      const row  = rows[0];
-      const aqi  = row.aqi;
-      const risk = aqi<=50?'Good':aqi<=100?'Moderate':aqi<=200?'Unhealthy':'Hazardous';
-      const div = document.createElement('div');
-      div.className = 'city-card';
-      div.innerHTML = `
-        <div class="city-name">📍 ${city}</div>
-        <div class="city-aqi" style="color:${aqiColor(aqi)}">${val(aqi,'')}</div>
-        <div class="city-risk ${riskClass(risk)}">${risk}</div>
-        <div class="city-metrics">
-          <div class="metric"><div class="metric-label">PM2.5</div><div class="metric-value">${val(row.pm25,' µg')}</div></div>
-          <div class="metric"><div class="metric-label">PM10</div><div class="metric-value">${val(row.pm10,' µg')}</div></div>
-          <div class="metric"><div class="metric-label">NO₂</div><div class="metric-value">${val(row.no2,' µg')}</div></div>
-          <div class="metric"><div class="metric-label">O₃</div><div class="metric-value">${val(row.o3,' µg')}</div></div>
-          <div class="metric"><div class="metric-label">Temp</div><div class="metric-value">${val(row.temperature,'°C')}</div></div>
-          <div class="metric"><div class="metric-label">Humidity</div><div class="metric-value">${val(row.humidity,'%')}</div></div>
+    const grid=document.getElementById('city-grid');
+    if(!latest.length){grid.innerHTML='<div style="color:var(--muted)">No data yet — click Fetch Now</div>';return}
+    grid.innerHTML='';
+    cities.forEach(city=>{
+      const rows=latest.filter(r=>r.city===city);
+      const row=rows[0];
+      const aqi=row.aqi;
+      const risk=aqi<=50?'Good':aqi<=100?'Moderate':aqi<=200?'Unhealthy':'Hazardous';
+      const d=document.createElement('div');
+      d.className='city-card';
+      d.innerHTML=`<div class="city-name">📍 ${city}</div>
+        <div class="city-aqi" style="color:${aqiColor(aqi)}">${v(aqi)}</div>
+        <span class="risk-badge ${riskClass(risk)}">${risk}</span>
+        <div class="city-grid">
+          <div class="cm"><div class="cm-l">PM2.5</div><div class="cm-v">${v(row.pm25,' µg')}</div></div>
+          <div class="cm"><div class="cm-l">PM10</div><div class="cm-v">${v(row.pm10,' µg')}</div></div>
+          <div class="cm"><div class="cm-l">NO₂</div><div class="cm-v">${v(row.no2,' µg')}</div></div>
+          <div class="cm"><div class="cm-l">O₃</div><div class="cm-v">${v(row.o3,' µg')}</div></div>
+          <div class="cm"><div class="cm-l">Temp</div><div class="cm-v">${v(row.temperature,'°C')}</div></div>
+          <div class="cm"><div class="cm-l">Humidity</div><div class="cm-v">${v(row.humidity,'%')}</div></div>
         </div>
-        <div class="city-source">Source: ${rows.map(r=>r.source).join(' · ')}</div>`;
-      grid.appendChild(div);
+        <div class="csrc">Sources: ${rows.map(r=>r.source).join(' · ')}</div>`;
+      grid.appendChild(d);
     });
 
-    // Trend chart — last 20 records sorted by time
-    const all = await apiGet('/api/readings?limit=60');
-    const bycity = {};
-    all.forEach(r => { (bycity[r.city]||=[]).push(r); });
-    const colors = ['#00d4ff','#7c3aed','#22c55e','#eab308','#ef4444'];
-    trendChart.data.datasets = Object.keys(bycity).slice(0,5).map((city,i)=>{
-      const pts = bycity[city].slice(0,20).reverse();
-      return {
-        label: city,
-        data: pts.map(r=>r.aqi),
-        borderColor: colors[i],
-        backgroundColor: colors[i]+'22',
-        tension: .3, fill: true, pointRadius: 3,
-      };
+    // Trend chart
+    const byCity={};
+    all.forEach(r=>{(byCity[r.city]||(byCity[r.city]=[])).push(r)});
+    const colors=['#00d4ff','#7c3aed','#22c55e','#eab308','#ef4444'];
+    tChart.data.datasets=Object.keys(byCity).slice(0,5).map((city,i)=>{
+      const pts=byCity[city].slice(0,20).reverse();
+      return{label:city,data:pts.map(r=>r.aqi),borderColor:colors[i],backgroundColor:colors[i]+'20',tension:.3,fill:true,pointRadius:3};
     });
-    const labels = Object.values(bycity)[0]?.slice(0,20).reverse()
-      .map(r=>r.fetched_at?.slice(11,16)||'') || [];
-    trendChart.data.labels = labels;
-    trendChart.update();
-    document.getElementById('trend-updated').textContent =
-      'Updated ' + new Date().toLocaleTimeString();
+    const lpts=Object.values(byCity)[0]?.slice(0,20).reverse()||[];
+    tChart.data.labels=lpts.map(r=>(r.fetched_at||'').slice(11,16));
+    tChart.update();
 
-    // Risk distribution
-    const riskCounts = {'Good':0,'Moderate':0,'Unhealthy':0,'Very Unhealthy':0,'Hazardous':0};
-    all.forEach(r => {
-      const a = r.aqi;
-      if (!a) return;
-      if (a<=50) riskCounts['Good']++;
-      else if (a<=100) riskCounts['Moderate']++;
-      else if (a<=150) riskCounts['Unhealthy']++;
-      else if (a<=200) riskCounts['Very Unhealthy']++;
-      else riskCounts['Hazardous']++;
-    });
-    riskChart.data.labels = Object.keys(riskCounts);
-    riskChart.data.datasets[0].data = Object.values(riskCounts);
-    riskChart.update();
+    // Risk chart
+    const rc={Good:0,Moderate:0,Unhealthy:0,'Very Unhealthy':0,Hazardous:0};
+    all.forEach(r=>{const a=r.aqi;if(!a)return;if(a<=50)rc.Good++;else if(a<=100)rc.Moderate++;else if(a<=150)rc.Unhealthy++;else if(a<=200)rc['Very Unhealthy']++;else rc.Hazardous++;});
+    rChart.data.labels=Object.keys(rc);
+    rChart.data.datasets[0].data=Object.values(rc);
+    rChart.update();
+  }catch(e){console.error(e)}
 
-  } catch(e) { console.error(e); }
+  // Model metrics
+  try{
+    const data=await get('/api/metrics');
+    const tbody=document.getElementById('model-tbody');
+    if(!data.length){tbody.innerHTML='<tr><td colspan="5" style="color:var(--muted)">No models trained yet.</td></tr>';document.getElementById('s-models').textContent='0';return}
+    const latest={};data.forEach(r=>{latest[r.model]=r});
+    const rows=Object.values(latest);
+    document.getElementById('s-models').textContent=rows.length;
+    const best=rows.reduce((a,b)=>a.accuracy>b.accuracy?a:b);
+    tbody.innerHTML=rows.map(r=>`<tr>
+      <td><strong>${r.model}</strong>${r.model===best.model?' <span class="badge badge-best">Best</span>':''}</td>
+      <td>${(r.accuracy*100).toFixed(1)}%</td>
+      <td>${(r.f1*100).toFixed(1)}%</td>
+      <td>${(r.precision_*100).toFixed(1)}%</td>
+      <td>${(r.recall*100).toFixed(1)}%</td>
+    </tr>`).join('');
+  }catch(e){}
+
+  // Predictions
+  try{
+    const data=await get('/api/predictions?limit=10');
+    const tbody=document.getElementById('pred-tbody');
+    if(!data.length){tbody.innerHTML='<tr><td colspan="5" style="color:var(--muted)">No predictions yet.</td></tr>';return}
+    tbody.innerHTML=data.map(p=>`<tr>
+      <td>${p.city}</td>
+      <td style="color:var(--muted);font-size:11px">${p.model}</td>
+      <td><span class="risk-badge ${riskClass(p.risk_level)}">${p.risk_level}</span></td>
+      <td style="font-family:'Space Mono',monospace">${p.risk_score}</td>
+      <td>${p.confidence!=null?(p.confidence*100).toFixed(0)+'%':'–'}</td>
+    </tr>`).join('');
+  }catch(e){}
+
+  // Logs
+  try{
+    const data=await get('/api/logs?limit=25');
+    const el=document.getElementById('log-list');
+    if(!data.length){el.innerHTML='<div style="color:var(--muted);font-size:13px">No logs.</div>';return}
+    el.innerHTML=data.map(l=>`<div class="log-row">
+      <span class="${l.status==='ok'?'ok':l.status==='no_data'?'nd':'err'}">${l.status==='ok'?'✓':l.status==='no_data'?'–':'✗'}</span>
+      <span style="min-width:80px">${l.city||'–'}</span>
+      <span style="color:var(--accent);min-width:120px">${l.source||'–'}</span>
+      <span style="color:var(--muted);font-size:11px">${l.message||''}</span>
+      <span style="color:var(--muted);margin-left:auto;white-space:nowrap">${(l.logged_at||'').slice(11,19)}</span>
+    </div>`).join('');
+  }catch(e){}
 }
 
-// ─── Load readings count ──────────────────────────────────────────────────────
-async function loadReadingsCount() {
-  try {
-    const data = await apiGet('/api/readings?limit=1000');
-    document.getElementById('st-readings').textContent = data.length+'+'
-  } catch{}
-}
+document.getElementById('btn-fetch').onclick=async()=>{
+  const b=document.getElementById('btn-fetch');b.disabled=true;sp('fetch',true);
+  try{const r=await post('/api/fetch');toast('✅ '+r.inserted+' records inserted');await loadAll();}
+  catch(e){toast('❌ Fetch failed',false);}
+  b.disabled=false;sp('fetch',false);
+};
+document.getElementById('btn-train').onclick=async()=>{
+  const b=document.getElementById('btn-train');b.disabled=true;sp('train',true);
+  toast('⏳ Training… may take 30s');
+  try{const r=await post('/api/train');r.status==='ok'?toast('✅ Models trained!'):toast('❌ '+r.message,false);await loadAll();}
+  catch(e){toast('❌ Training failed',false);}
+  b.disabled=false;sp('train',false);
+};
+document.getElementById('btn-predict').onclick=async()=>{
+  const b=document.getElementById('btn-predict');b.disabled=true;sp('predict',true);
+  try{const r=await post('/api/predict');r.status==='ok'?toast('✅ '+r.predictions_stored+' predictions stored'):toast('❌ '+r.message,false);await loadAll();}
+  catch(e){toast('❌ Predict failed',false);}
+  b.disabled=false;sp('predict',false);
+};
+document.getElementById('btn-refresh').onclick=loadAll;
 
-// ─── Load model metrics ───────────────────────────────────────────────────────
-async function loadModels() {
-  try {
-    const data = await apiGet('/api/model-metrics');
-    const tbody = document.getElementById('model-tbody');
-    if (!data.length) { tbody.innerHTML='<tr><td colspan="5" style="color:var(--muted)">No models trained yet.</td></tr>'; return; }
-
-    // Group by model, take latest
-    const latest = {};
-    data.forEach(r => { latest[r.model_name] = r; });
-    const rows = Object.values(latest);
-    document.getElementById('st-models').textContent = rows.length;
-
-    const best = rows.reduce((a,b)=>a.accuracy>b.accuracy?a:b);
-    tbody.innerHTML = rows.map(r=>`
-      <tr>
-        <td><strong>${r.model_name}</strong>${r.model_name===best.model_name?'&nbsp;<span class="badge badge-best">Best</span>':''}</td>
-        <td>${(r.accuracy*100).toFixed(1)}%</td>
-        <td>${(r.f1_score*100).toFixed(1)}%</td>
-        <td>${(r.precision_score*100).toFixed(1)}%</td>
-        <td>${(r.recall_score*100).toFixed(1)}%</td>
-      </tr>`).join('');
-  } catch(e){ console.error(e); }
-}
-
-// ─── Load predictions ─────────────────────────────────────────────────────────
-async function loadPredictions() {
-  try {
-    const data = await apiGet('/api/predictions/?limit=15');
-    const tbody = document.getElementById('pred-tbody');
-    if (!data.length) { tbody.innerHTML='<tr><td colspan="5" style="color:var(--muted)">No predictions yet.</td></tr>'; return; }
-    tbody.innerHTML = data.map(p=>`
-      <tr>
-        <td>${p.city}</td>
-        <td style="color:var(--muted);font-size:11px">${p.model_name}</td>
-        <td><span class="city-risk ${riskClass(p.risk_level)}" style="font-size:11px">${p.risk_level}</span></td>
-        <td style="font-family:'Space Mono',monospace">${p.risk_score}</td>
-        <td>${p.confidence!=null?(p.confidence*100).toFixed(0)+'%':'—'}</td>
-      </tr>`).join('');
-  } catch(e){ console.error(e); }
-}
-
-// ─── Load logs ────────────────────────────────────────────────────────────────
-async function loadLogs() {
-  try {
-    const data = await apiGet('/api/logs?limit=30');
-    const el = document.getElementById('log-list');
-    if (!data.length) { el.innerHTML='<div style="color:var(--muted);font-size:13px">No logs.</div>'; return; }
-    el.innerHTML = data.map(l=>`
-      <div class="log-item">
-        <span class="${l.status==='success'?'log-ok':'log-err'}">${l.status==='success'?'✓':'✗'}</span>
-        <span class="log-city">${l.city||'—'}</span>
-        <span class="log-src">${l.source||'—'}</span>
-        <span style="color:var(--muted);font-size:11px">${l.message||''}</span>
-        <span class="log-time">${(l.logged_at||'').slice(11,19)}</span>
-      </div>`).join('');
-  } catch(e){}
-}
-
-// ─── Buttons ──────────────────────────────────────────────────────────────────
-document.getElementById('btn-fetch').addEventListener('click', async () => {
-  const btn = document.getElementById('btn-fetch');
-  btn.disabled = true; spinner('fetch', true);
-  try {
-    const r = await apiPost('/api/fetch');
-    toast(`✅ Fetched! ${r.inserted} records inserted.`);
-    await loadAll();
-  } catch(e) { toast('❌ Fetch failed: '+e.message, false); }
-  btn.disabled = false; spinner('fetch', false);
-});
-
-document.getElementById('btn-train').addEventListener('click', async () => {
-  const btn = document.getElementById('btn-train');
-  btn.disabled = true; spinner('train', true);
-  toast('⏳ Training models… this may take 30-60s');
-  try {
-    await apiPost('/api/train');
-    toast('✅ Models retrained successfully!');
-    await loadModels();
-  } catch(e) { toast('❌ Training failed: '+e.message, false); }
-  btn.disabled = false; spinner('train', false);
-});
-
-document.getElementById('btn-predict').addEventListener('click', async () => {
-  const btn = document.getElementById('btn-predict');
-  btn.disabled = true; spinner('predict', true);
-  try {
-    await apiPost('/api/predictions/run');
-    toast('✅ Predictions updated!');
-    await loadPredictions();
-  } catch(e) { toast('❌ Prediction failed: '+e.message, false); }
-  btn.disabled = false; spinner('predict', false);
-});
-
-document.getElementById('btn-refresh').addEventListener('click', loadAll);
-
-// ─── Load all ─────────────────────────────────────────────────────────────────
-async function loadAll() {
-  await Promise.all([loadLatest(), loadModels(), loadPredictions(), loadLogs(), loadReadingsCount()]);
-}
-
-// ─── Init ─────────────────────────────────────────────────────────────────────
-initTrendChart();
-initRiskChart();
+initCharts();
 loadAll();
-setInterval(loadAll, 60000); // auto-refresh every 60s
+setInterval(loadAll,60000);
 </script>
 </body>
 </html>
